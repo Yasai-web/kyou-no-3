@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#F3F6F6">
+<title>きょうの3つ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.7.0/dist/tabler-icons.min.css">
+<style>
+:root{
+  --bg:#F3F6F6;
+  --card:#FFFFFF;
+  --ink:#2A3439;
+  --gray:#7E8C94;
+  --faint:#AEB9BE;
+  --line:#E3E9EA;
+  --green:#3F8A78;
+  --blue:#4A6FA5;
+  --blue-bg:#F4F7FB;
+  --blue-soft:#EDF2F9;
+  --amber:#DD9627;
+  --amber-bg:#FCF3E2;
+  --amber-ink:#8A5E14;
+  --round:999px;
+  --radius:15px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:"Noto Sans JP",system-ui,sans-serif;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{
+  max-width:440px;
+  margin:0 auto;
+  padding:24px 20px calc(48px + env(safe-area-inset-bottom));
+  min-height:100vh;
+}
+.round{font-family:"Zen Maru Gothic","Noto Sans JP",sans-serif;font-weight:700;}
+.datelabel{
+  font-size:12px;color:var(--gray);letter-spacing:.14em;
+  margin:0 0 6px;font-weight:500;
+}
+h1.title{
+  font-family:"Zen Maru Gothic",sans-serif;font-weight:700;
+  font-size:25px;margin:0 0 26px;letter-spacing:.01em;
+}
+.section-h{
+  font-family:"Zen Maru Gothic",sans-serif;font-weight:700;
+  font-size:14px;color:var(--gray);letter-spacing:.06em;
+  margin:30px 2px 12px;
+}
+.section-h:first-of-type{margin-top:8px;}
+
+/* mode cards (screen ①, ⑤) */
+.mode-card{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  padding:20px;margin-bottom:14px;cursor:pointer;display:flex;gap:16px;align-items:flex-start;
+  transition:border-color .15s,box-shadow .15s;
+}
+.mode-card:active{border-color:var(--blue);}
+.mode-ico{
+  flex:0 0 46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+  font-size:24px;
+}
+.mode-ico.blue{background:var(--blue-soft);color:var(--blue);}
+.mode-ico.amber{background:var(--amber-bg);color:var(--amber);}
+.mode-ttl{font-family:"Zen Maru Gothic",sans-serif;font-weight:700;font-size:17px;margin:2px 0 4px;}
+.mode-sub{font-size:13px;color:var(--gray);}
+.mood-options{display:none;gap:10px;margin:-4px 0 14px;}
+.mood-options.open{display:flex;}
+.mood-btn{
+  flex:1;background:var(--card);border:1px solid var(--line);border-radius:13px;
+  padding:14px 6px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;
+}
+.mood-btn:active{border-color:var(--amber);background:var(--amber-bg);}
+.mood-btn .mi{font-size:22px;color:var(--amber);display:block;margin-bottom:6px;}
+.mood-btn .ml{font-family:"Zen Maru Gothic",sans-serif;font-weight:700;font-size:13px;}
+
+/* pick cards (today's three) */
+.pick{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  padding:16px 16px;margin-bottom:12px;display:flex;align-items:center;gap:14px;cursor:pointer;
+  transition:opacity .2s;
+}
+.pick.done{opacity:.75;}
+.check{
+  flex:0 0 26px;height:26px;border-radius:50%;border:2px solid var(--faint);
+  display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff;transition:all .15s;
+}
+.pick.done .check{background:var(--green);border-color:var(--green);}
+.pick-body{flex:1;min-width:0;}
+.pick-main{font-family:"Zen Maru Gothic",sans-serif;font-weight:700;font-size:16px;}
+.pick.done .pick-main{text-decoration:line-through;color:var(--gray);}
+.pick-sub{font-size:12px;color:var(--gray);margin-top:3px;}
+.pick.done .pick-sub{color:var(--green);}
+.swap{
+  flex:0 0 auto;color:var(--faint);font-size:21px;padding:6px;margin:-6px -4px -6px 0;cursor:pointer;
+}
+.lock-ico{flex:0 0 auto;color:var(--gray);font-size:18px;}
+
+/* fun pills */
+.pills{display:flex;flex-wrap:wrap;gap:9px;}
+.pill{
+  display:inline-flex;align-items:center;gap:7px;background:var(--card);
+  border:1px solid var(--line);border-radius:var(--round);padding:8px 15px;font-size:13px;
+}
+.pill .pi{color:var(--amber);font-size:16px;}
+
+/* daily grid */
+.daily-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.daily-card{
+  background:var(--card);border:1px solid var(--line);border-radius:13px;
+  padding:13px 13px;display:flex;align-items:center;gap:11px;cursor:pointer;transition:opacity .2s;
+}
+.daily-card.done{opacity:.75;}
+.daily-card .check{flex:0 0 22px;height:22px;font-size:13px;}
+.daily-card.done .check{background:var(--green);border-color:var(--green);}
+.daily-name{font-size:14px;font-weight:500;}
+.daily-card.done .daily-name{text-decoration:line-through;color:var(--gray);}
+
+/* countdown */
+.countdown{
+  background:var(--amber-bg);border-radius:var(--radius);padding:15px 18px;
+  display:flex;align-items:center;gap:14px;margin-top:14px;
+}
+.countdown .ci{color:var(--amber);font-size:24px;}
+.cd-name{font-size:13px;color:var(--amber-ink);font-weight:500;}
+.cd-days{font-family:"Zen Maru Gothic",sans-serif;font-weight:700;color:var(--amber);font-size:18px;margin-top:1px;}
+
+/* candidate list */
+.cand-group-h{font-size:12px;color:var(--gray);letter-spacing:.05em;margin:22px 2px 10px;font-weight:500;}
+.cand{
+  background:var(--card);border:1.5px solid var(--line);border-radius:13px;
+  padding:14px 15px;margin-bottom:10px;display:flex;align-items:center;gap:12px;cursor:pointer;
+  transition:border-color .15s,background .15s;
+}
+.cand.sel{border-color:var(--blue);background:var(--blue-bg);}
+.cand.disabled{opacity:.4;pointer-events:none;}
+.cand-tick{
+  flex:0 0 22px;height:22px;border-radius:50%;border:2px solid var(--faint);
+  display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;
+}
+.cand.sel .cand-tick{background:var(--blue);border-color:var(--blue);}
+.cand-body{flex:1;min-width:0;}
+.cand-main{font-family:"Zen Maru Gothic",sans-serif;font-weight:700;font-size:15px;}
+.cand-sub{font-size:12px;color:var(--gray);margin-top:2px;}
+.badge{
+  display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:11px;font-weight:700;
+  border-radius:var(--round);padding:2px 9px;margin-left:8px;vertical-align:1px;
+  font-family:"Zen Maru Gothic",sans-serif;
+}
+
+/* buttons & links */
+.confirm{
+  width:100%;border:none;border-radius:14px;padding:16px;margin-top:24px;
+  font-family:"Zen Maru Gothic",sans-serif;font-weight:700;font-size:16px;color:#fff;
+  background:var(--blue);cursor:pointer;transition:opacity .15s;
+}
+.confirm:disabled{background:var(--faint);cursor:default;}
+.link{
+  display:inline-block;color:var(--gray);font-size:14px;text-decoration:underline;
+  text-underline-offset:3px;cursor:pointer;margin-top:18px;background:none;border:none;
+  font-family:inherit;padding:0;
+}
+.link.center{display:block;text-align:center;margin-top:22px;}
+.link.small{font-size:13px;color:var(--faint);}
+
+/* locked slot (reselect) */
+.locked-note{font-size:13px;color:var(--gray);margin:6px 2px 18px;}
+.framed{
+  border:1.5px dashed var(--line);border-radius:var(--radius);padding:14px 16px;margin-bottom:8px;
+  display:flex;align-items:center;gap:12px;
+}
+.framed .pick-main{font-size:15px;}
+
+/* ending screen */
+.ending{
+  text-align:center;padding:34px 10px 30px;
+}
+.ending .e-main{font-family:"Zen Maru Gothic",sans-serif;font-weight:700;font-size:22px;}
+.ending .e-sub{font-size:13px;color:var(--gray);margin-top:8px;}
+
+/* quiet notice */
+.notice{
+  text-align:center;color:var(--gray);font-size:14px;padding:60px 20px;line-height:2;
+}
+.fade{animation:fade .35s ease;}
+@keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+</style>
+</head>
+<body>
+<div class="wrap"><div id="app" class="fade"></div></div>
+<script>
+"use strict";
+(function(){
+
+const STORE_KEY = "kyou-no-3-state";
+const WD = ["日","月","火","水","木","金","土"];
+
+/* ---------- state ---------- */
+function freshState(){
+  return { dayKey:getDayKey(), todayPicks:[], dailyDone:{}, lastPicked:{}, csvCache:null };
+}
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(!raw) return freshState();
+    const s = JSON.parse(raw);
+    return Object.assign(freshState(), s);
+  }catch(e){ return freshState(); }
+}
+function saveState(){
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){}
+}
+let state = loadState();
+
+/* transient view state */
+let view = null;           // null => derived base view
+let moodOpen = false;      // ① mood expander
+let pending = [];          // manual selection (candidate objects)
+let candCtx = null;        // {mode, max, exclude:Set, count}
+let swapIndex = -1;        // ④ slot being swapped
+let reselectStep = "choose"; // ⑤ "choose" | "self"
+
+/* ---------- day key (4:00 boundary) ---------- */
+function getDayKey(d){
+  d = d || new Date();
+  const shifted = new Date(d.getTime() - 4*3600*1000);
+  return fmtKey(shifted);
+}
+function fmtKey(d){
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,"0"), day=String(d.getDate()).padStart(2,"0");
+  return y+"-"+m+"-"+day;
+}
+let currentDayKey = getDayKey();
+
+function rolloverIfNeeded(){
+  const cur = getDayKey();
+  if(state.dayKey !== cur){
+    state.dayKey = cur;
+    state.todayPicks = [];
+    state.dailyDone = {};
+    // lastPicked & csvCache are kept
+    saveState();
+  }
+  currentDayKey = cur;
+}
+
+/* ---------- helpers ---------- */
+function esc(s){
+  return String(s==null?"":s).replace(/[&<>"']/g,function(m){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m];
+  });
+}
+function norm(e){
+  e=(e||"").trim();
+  return (e==="軽い"||e==="ふつう"||e==="重い") ? e : "ふつう";
+}
+function keyOf(x){ return x.source==="routine" ? x.name : (x.name+"::"+(x.next||"")); }
+function dayKeyNum(k){ return Number(String(k).replace(/-/g,"")); }
+
+function todayWeekdayChar(){
+  const p = currentDayKey.split("-").map(Number);
+  return WD[new Date(p[0],p[1]-1,p[2]).getDay()];
+}
+function routineToday(r){
+  const days = (r.days||"").trim();
+  if(!days || days==="毎日") return true;
+  return days.indexOf(todayWeekdayChar()) !== -1;
+}
+function dateLabel(){
+  const p = currentDayKey.split("-").map(Number);
+  const dt = new Date(p[0],p[1]-1,p[2]);
+  return p[0]+"年"+p[1]+"月"+p[2]+"日 "+WD[dt.getDay()]+"曜日";
+}
+
+/* ---------- CSV ---------- */
+function parseCSV(text){
+  const lines = text.split(/\r?\n/).filter(function(l){ return l.trim()!==""; });
+  if(!lines.length) return [];
+  const headers = lines[0].split(",").map(function(h){ return h.trim(); });
+  return lines.slice(1).map(function(line){
+    const cells = line.split(",").map(function(c){ return c.trim(); });
+    const o = {};
+    headers.forEach(function(h,i){ o[h] = cells[i]!==undefined ? cells[i] : ""; });
+    return o;
+  });
+}
+async function loadData(){
+  const files = ["routines","projects","events","fun","daily"];
+  const t = Date.now();
+  try{
+    const texts = await Promise.all(files.map(function(f){
+      return fetch(f+".csv?t="+t).then(function(r){
+        if(!r.ok) throw new Error("fetch "+f);
+        return r.text();
+      });
+    }));
+    const data = {};
+    files.forEach(function(f,i){ data[f] = parseCSV(texts[i]); });
+    state.csvCache = data;
+    saveState();
+    return data;
+  }catch(e){
+    return state.csvCache || null;
+  }
+}
+
+/* ---------- data accessors ---------- */
+function routines(){ return (state.csvCache && state.csvCache.routines) || []; }
+function projects(){ return (state.csvCache && state.csvCache.projects) || []; }
+function events(){ return (state.csvCache && state.csvCache.events) || []; }
+function funList(){ return (state.csvCache && state.csvCache.fun) || []; }
+function dailyList(){ return (state.csvCache && state.csvCache.daily) || []; }
+
+function allCandidates(){
+  const list = [];
+  routines().forEach(function(r){
+    list.push({ source:"routine", name:r.name, min:(r.min||"").trim(), energy:norm(r.energy) });
+  });
+  projects().forEach(function(p){
+    list.push({ source:"project", name:p.name, next:p.next, energy:norm(p.energy) });
+  });
+  return list;
+}
+function pickedKeys(){
+  const s = new Set();
+  state.todayPicks.forEach(function(p){ s.add(keyOf(p)); });
+  return s;
+}
+
+/* ---------- selection logic ---------- */
+function autoPick(mood, count, exclude){
+  let pool = allCandidates().filter(function(x){ return !exclude.has(keyOf(x)); });
+  if(mood==="light") pool = pool.filter(function(x){ return x.energy==="軽い"; });
+  else if(mood==="normal") pool = pool.filter(function(x){ return x.energy==="軽い"||x.energy==="ふつう"; });
+  // hard: all
+
+  const scored = pool.map(function(x){
+    const lp = state.lastPicked[keyOf(x)];
+    return {
+      x:x,
+      weekdayBonus:(x.source==="routine" && routineToday(x)) ? 0 : 1, // 0 = priority
+      rota: lp ? dayKeyNum(lp) : -1                                    // smaller = older / never
+    };
+  });
+  scored.sort(function(a,b){
+    return a.weekdayBonus-b.weekdayBonus || a.rota-b.rota || Math.random()-0.5;
+  });
+
+  const result = [];
+  const routineCap = count>=3 ? 2 : count;
+  if(mood==="hard"){
+    const h = scored.find(function(s){ return s.x.energy==="重い"; });
+    if(h) result.push(h.x);
+  }
+  let rc = result.filter(function(x){ return x.source==="routine"; }).length;
+  function projectLeft(){ return scored.some(function(s){ return s.x.source==="project" && result.indexOf(s.x)===-1; }); }
+  for(let i=0;i<scored.length && result.length<count;i++){
+    const x = scored[i].x;
+    if(result.indexOf(x)!==-1) continue;
+    if(x.source==="routine" && rc>=routineCap && projectLeft()) continue; // keep balance
+    result.push(x);
+    if(x.source==="routine") rc++;
+  }
+  // fill any remainder (balance constraint may have skipped slots)
+  for(let i=0;i<scored.length && result.length<count;i++){
+    if(result.indexOf(scored[i].x)===-1) result.push(scored[i].x);
+  }
+  return result.slice(0,count);
+}
+
+function toPick(x){
+  return { source:x.source, name:x.name, next:x.next||"", energy:x.energy, min:x.min||"", done:false };
+}
+function recordPicked(items){
+  items.forEach(function(x){ state.lastPicked[keyOf(x)] = currentDayKey; });
+}
+function commitPicks(items, append){
+  const picks = items.map(toPick);
+  state.todayPicks = append ? state.todayPicks.concat(picks) : picks;
+  recordPicked(items);
+  saveState();
+}
+function commitReselect(items){
+  const completed = state.todayPicks.filter(function(p){ return p.done; });
+  state.todayPicks = completed.concat(items.map(toPick));
+  recordPicked(items);
+  saveState();
+}
+function commitSwap(index, x){
+  state.todayPicks[index] = toPick(x);
+  recordPicked([x]);
+  saveState();
+}
+
+/* ---------- icons ---------- */
+function funIcon(name){
+  const map = [
+    [/ボルダリング|登山|クライミング|運動|筋トレ/, "ti-mountain"],
+    [/漫画|マンガ|本|読書|読む/, "ti-book"],
+    [/アニメ|動画|TV|テレビ|ビデオ/, "ti-device-tv"],
+    [/ゲーム/, "ti-device-gamepad-2"],
+    [/音楽|曲|聴く/, "ti-music"],
+    [/映画/, "ti-movie"],
+    [/散歩|ウォーク/, "ti-walk"]
+  ];
+  for(let i=0;i<map.length;i++){ if(map[i][0].test(name)) return map[i][1]; }
+  return "ti-sparkles";
+}
+function eventIcon(name){
+  if(/旅行|旅|トリップ/.test(name)) return "ti-plane-departure";
+  if(/誕生日|バースデー|誕生/.test(name)) return "ti-cake";
+  return "ti-calendar-heart";
+}
+
+/* ---------- countdown ---------- */
+function nearestEvent(){
+  const p = currentDayKey.split("-").map(Number);
+  const today = new Date(p[0],p[1]-1,p[2]);
+  const fut = events().map(function(e){
+    const dp = (e.date||"").split("-").map(Number);
+    const d = (dp.length===3 && !isNaN(dp[0])) ? new Date(dp[0],dp[1]-1,dp[2]) : null;
+    return { name:e.name, d:d };
+  }).filter(function(e){
+    return e.d && Math.round((e.d - today)/86400000) >= 0;
+  }).sort(function(a,b){ return a.d - b.d; });
+  if(!fut.length) return null;
+  const e = fut[0];
+  e.days = Math.round((e.d - today)/86400000);
+  return e;
+}
+
+/* ---------- display helpers ---------- */
+function pickMain(p){ return p.source==="routine" ? p.name : p.next; }
+function pickSub(p){
+  if(p.done) return "完了!";
+  if(p.source==="routine"){
+    const parts = ["ルーティン"];
+    if((p.min||"")!=="") parts.push(p.min+"分");
+    parts.push(p.energy);
+    return parts.join(" · ");
+  }
+  return p.name + " · " + p.energy;
+}
+function candMain(c){ return c.source==="routine" ? c.name : c.next; }
+function candSub(c){
+  if(c.source==="routine"){
+    const parts = [];
+    if((c.min||"")!=="") parts.push(c.min+"分");
+    parts.push(c.energy);
+    return parts.join(" · ");
+  }
+  return c.name + " · " + c.energy;
+}
+
+/* ---------- shared blocks ---------- */
+function funBlock(){
+  const items = funList();
+  if(!items.length) return "";
+  let h = '<div class="section-h">きょうのたのしみ</div><div class="pills">';
+  items.forEach(function(f){
+    h += '<span class="pill"><i class="ti '+funIcon(f.name)+' pi"></i>'+esc(f.name)+'</span>';
+  });
+  return h + "</div>";
+}
+function dailyBlock(){
+  const items = dailyList();
+  if(!items.length) return "";
+  let h = '<div class="section-h">まいにち</div><div class="daily-grid">';
+  items.forEach(function(d){
+    const done = !!state.dailyDone[d.name];
+    h += '<div class="daily-card'+(done?" done":"")+'" data-action="daily-toggle" data-name="'+esc(d.name)+'">'
+      + '<span class="check"><i class="ti ti-check"></i></span>'
+      + '<span class="daily-name">'+esc(d.name)+'</span></div>';
+  });
+  return h + "</div>";
+}
+function countdownBlock(){
+  const e = nearestEvent();
+  if(!e) return "";
+  const txt = e.days===0 ? "今日!" : "あと"+e.days+"日";
+  return '<div class="countdown"><i class="ti '+eventIcon(e.name)+' ci"></i><div>'
+    + '<div class="cd-name">'+esc(e.name)+'まで</div>'
+    + '<div class="cd-days">'+txt+'</div></div></div>';
+}
+function header(title){
+  return '<div class="datelabel round">'+esc(dateLabel())+'</div><h1 class="title">'+esc(title)+'</h1>';
+}
+
+/* ---------- candidate list (②④⑤self⑥addOne) ---------- */
+function candidateListHTML(){
+  const cands = allCandidates();
+  const rs = cands.filter(function(c){ return c.source==="routine"; });
+  const ps = cands.filter(function(c){ return c.source==="project"; });
+  const selKeys = new Set(pending.map(keyOf));
+
+  function row(c){
+    const k = keyOf(c);
+    const disabled = candCtx.exclude.has(k);
+    const sel = selKeys.has(k);
+    const badge = (c.source==="routine" && routineToday(c)) ? '<span class="badge">今日</span>' : "";
+    return '<div class="cand'+(sel?" sel":"")+(disabled?" disabled":"")+'" '
+      + (disabled?"":'data-action="cand-toggle" data-key="'+esc(k)+'"')+'>'
+      + '<span class="cand-tick"><i class="ti ti-check"></i></span>'
+      + '<div class="cand-body"><div class="cand-main">'+esc(candMain(c))+badge+'</div>'
+      + '<div class="cand-sub">'+esc(candSub(c))+'</div></div></div>';
+  }
+
+  let h = "";
+  if(rs.length){
+    h += '<div class="cand-group-h">ルーティン</div>';
+    rs.forEach(function(c){ h += row(c); });
+  }
+  if(ps.length){
+    h += '<div class="cand-group-h">プロジェクトの次の一手</div>';
+    ps.forEach(function(c){ h += row(c); });
+  }
+  return h;
+}
+function confirmBar(){
+  const n = pending.length;
+  const label = n>0 ? "この"+n+"つでいく" : "タップして選ぶ（1〜"+candCtx.max+"つ）";
+  return '<button class="confirm" data-action="confirm-picks"'+(n>0?"":" disabled")+'>'+label+'</button>';
+}
+
+/* ---------- screens ---------- */
+function screenMorning(){
+  return header("今日は、どう決める？")
+    + '<div class="mode-card" data-action="mode-self">'
+      + '<div class="mode-ico blue"><i class="ti ti-hand-finger"></i></div>'
+      + '<div><div class="mode-ttl">じぶんで選ぶ</div><div class="mode-sub">リストから気分でタップ。最大3つ。</div></div></div>'
+    + '<div class="mode-card" data-action="mood-expand">'
+      + '<div class="mode-ico amber"><i class="ti ti-cloud"></i></div>'
+      + '<div><div class="mode-ttl">気分に合わせる</div><div class="mode-sub">今日のエネルギーに合う3つを自動で。</div></div></div>'
+    + '<div class="mood-options'+(moodOpen?" open":"")+'">'
+      + moodBtn("light","軽めの日","ti-feather","morning")
+      + moodBtn("normal","ふつう","ti-walk","morning")
+      + moodBtn("hard","しっかり","ti-flame","morning")
+    + '</div>';
+}
+function moodBtn(mood,label,icon,ctx){
+  return '<div class="mood-btn" data-action="mood-pick" data-mood="'+mood+'" data-ctx="'+ctx+'">'
+    + '<i class="ti '+icon+' mi"></i><span class="ml">'+label+'</span></div>';
+}
+
+function screenPickList(){
+  let title, back;
+  if(candCtx.mode==="addone"){ title="もう1つ、なににする？"; back="cancel"; }
+  else { title="今日は、どう決める？"; back="to-morning"; }
+  return header(title)
+    + candidateListHTML()
+    + confirmBar()
+    + '<button class="link center" data-action="'+back+'">もどる</button>';
+}
+
+function picksBlock(forDone){
+  let h = '<div class="section-h">今日の3つ</div>';
+  state.todayPicks.forEach(function(p,i){
+    const swap = (!p.done && !forDone) ? '<i class="ti ti-switch-horizontal swap" data-action="open-swap" data-index="'+i+'"></i>' : "";
+    h += '<div class="pick'+(p.done?" done":"")+'" data-action="toggle-done" data-index="'+i+'">'
+      + '<span class="check"><i class="ti ti-check"></i></span>'
+      + '<div class="pick-body"><div class="pick-main">'+esc(pickMain(p))+'</div>'
+      + '<div class="pick-sub">'+esc(pickSub(p))+'</div></div>'
+      + swap + '</div>';
+  });
+  return h;
+}
+
+function screenToday(){
+  return header("今日はこれだけ")
+    + picksBlock(false)
+    + funBlock()
+    + dailyBlock()
+    + countdownBlock()
+    + '<button class="link center" data-action="open-reselect">残りを選び直す</button>';
+}
+
+function screenSwap(){
+  const target = state.todayPicks[swapIndex];
+  return header("入れかえる")
+    + '<div class="section-h">いま入っているもの</div>'
+    + '<div class="framed"><div class="pick-body"><div class="pick-main">'+esc(pickMain(target))+'</div>'
+      + '<div class="pick-sub">'+esc(pickSub(target))+'</div></div></div>'
+    + '<div class="section-h">かわりに入れる</div>'
+    + candidateListSwap()
+    + '<button class="link center" data-action="cancel">やめておく</button>';
+}
+function candidateListSwap(){
+  const cands = allCandidates();
+  const exclude = pickedKeys();
+  const rs = cands.filter(function(c){ return c.source==="routine" && !exclude.has(keyOf(c)); });
+  const ps = cands.filter(function(c){ return c.source==="project" && !exclude.has(keyOf(c)); });
+  function row(c){
+    const badge = (c.source==="routine" && routineToday(c)) ? '<span class="badge">今日</span>' : "";
+    return '<div class="cand" data-action="swap-pick" data-key="'+esc(keyOf(c))+'">'
+      + '<span class="cand-tick"><i class="ti ti-switch-horizontal"></i></span>'
+      + '<div class="cand-body"><div class="cand-main">'+esc(candMain(c))+badge+'</div>'
+      + '<div class="cand-sub">'+esc(candSub(c))+'</div></div></div>';
+  }
+  let h="";
+  if(!rs.length && !ps.length) return '<div class="locked-note">入れかえられる候補がありません。</div>';
+  if(rs.length){ h+='<div class="cand-group-h">ルーティン</div>'; rs.forEach(function(c){ h+=row(c); }); }
+  if(ps.length){ h+='<div class="cand-group-h">プロジェクトの次の一手</div>'; ps.forEach(function(c){ h+=row(c); }); }
+  return h;
+}
+
+function screenReselect(){
+  const completed = state.todayPicks.filter(function(p){ return p.done; });
+  const remaining = state.todayPicks.length - completed.length;
+  let h = header("残り"+remaining+"つは、どう決める？");
+  if(completed.length){
+    completed.forEach(function(p){
+      h += '<div class="framed"><i class="ti ti-lock lock-ico"></i>'
+        + '<div class="pick-body"><div class="pick-main" style="text-decoration:line-through;color:var(--gray)">'+esc(pickMain(p))+'</div>'
+        + '<div class="pick-sub" style="color:var(--green)">完了! このまま残ります</div></div></div>';
+    });
+  }
+  if(reselectStep==="self"){
+    h += candidateListHTML() + confirmBar()
+      + '<button class="link center" data-action="open-reselect">もどる</button>';
+    return h;
+  }
+  h += '<div class="mode-card" data-action="reselect-self">'
+    + '<div class="mode-ico blue"><i class="ti ti-hand-finger"></i></div>'
+    + '<div><div class="mode-ttl">じぶんで選ぶ</div><div class="mode-sub">リストから気分でタップ。</div></div></div>'
+    + '<div class="mode-card" data-action="mood-expand">'
+    + '<div class="mode-ico amber"><i class="ti ti-cloud"></i></div>'
+    + '<div><div class="mode-ttl">気分に合わせる</div><div class="mode-sub">エネルギーに合う分を自動で。</div></div></div>'
+    + '<div class="mood-options'+(moodOpen?" open":"")+'">'
+    + moodBtn("light","軽めの日","ti-feather","reselect")
+    + moodBtn("normal","ふつう","ti-walk","reselect")
+    + moodBtn("hard","しっかり","ti-flame","reselect")
+    + '</div>'
+    + '<button class="link center" data-action="cancel">もどる</button>';
+  return h;
+}
+
+function screenDone(){
+  return header("今日はおしまい")
+    + picksBlock(true)
+    + funBlock()
+    + '<div class="ending"><div class="e-main">3つぜんぶ、よくやりました</div>'
+      + '<div class="e-sub">あとは自由時間です</div></div>'
+    + dailyBlock()
+    + countdownBlock()
+    + '<button class="link center small" data-action="open-addone">もう1つやる？</button>';
+}
+
+function screenNotice(){
+  return '<div class="notice round">いまは内容を読み込めませんでした。<br>つながったときに、また開いてみてください。</div>';
+}
+
+/* ---------- base view ---------- */
+function baseView(){
+  if(!state.todayPicks.length) return "morning";
+  if(state.todayPicks.every(function(p){ return p.done; })) return "done";
+  return "today";
+}
+
+/* ---------- render ---------- */
+function render(){
+  rolloverIfNeeded();
+  const app = document.getElementById("app");
+  if(!state.csvCache){ app.innerHTML = screenNotice(); restartFade(app); return; }
+  const v = view || baseView();
+  let html;
+  switch(v){
+    case "morning":  html = screenMorning(); break;
+    case "pickList": html = screenPickList(); break;
+    case "swap":     html = screenSwap(); break;
+    case "reselect": html = screenReselect(); break;
+    case "done":     html = screenDone(); break;
+    case "today":
+    default:         html = screenToday(); break;
+  }
+  app.innerHTML = html;
+  restartFade(app);
+  window.scrollTo(0,0);
+}
+function restartFade(el){ el.classList.remove("fade"); void el.offsetWidth; el.classList.add("fade"); }
+
+/* ---------- actions ---------- */
+const handlers = {
+  "mode-self": function(){
+    candCtx = { mode:"morning", max:3, exclude:new Set() };
+    pending = []; view = "pickList"; render();
+  },
+  "mood-expand": function(){ moodOpen = !moodOpen; render(); },
+  "mood-pick": function(el){
+    const mood = el.dataset.mood, ctx = el.dataset.ctx;
+    if(ctx==="morning"){
+      const items = autoPick(mood, 3, new Set());
+      commitPicks(items, false);
+      moodOpen = false; view = null;
+    } else { // reselect
+      const exclude = pickedKeys();
+      const remaining = state.todayPicks.filter(function(p){ return !p.done; }).length;
+      const items = autoPick(mood, remaining, exclude);
+      commitReselect(items);
+      moodOpen = false; view = null;
+    }
+    render();
+  },
+  "cand-toggle": function(el){
+    const key = el.dataset.key;
+    const idx = pending.findIndex(function(x){ return keyOf(x)===key; });
+    if(idx!==-1){ pending.splice(idx,1); }
+    else {
+      if(pending.length >= candCtx.max) return; // 打ち止め
+      const c = allCandidates().find(function(x){ return keyOf(x)===key; });
+      if(c) pending.push(c);
+    }
+    render();
+  },
+  "confirm-picks": function(){
+    if(!pending.length) return;
+    if(candCtx.mode==="morning"){ commitPicks(pending, false); }
+    else if(candCtx.mode==="addone"){ commitPicks(pending, true); }
+    else if(candCtx.mode==="reselect"){ commitReselect(pending); }
+    pending = []; view = null; reselectStep = "choose"; render();
+  },
+  "to-morning": function(){ view = "morning"; pending = []; moodOpen = false; render(); },
+  "toggle-done": function(el){
+    const i = Number(el.dataset.index);
+    state.todayPicks[i].done = !state.todayPicks[i].done;
+    saveState(); view = null; render();
+  },
+  "daily-toggle": function(el){
+    const n = el.dataset.name;
+    state.dailyDone[n] = !state.dailyDone[n];
+    saveState(); render();
+  },
+  "open-swap": function(el){
+    swapIndex = Number(el.dataset.index);
+    view = "swap"; render();
+  },
+  "swap-pick": function(el){
+    const key = el.dataset.key;
+    const c = allCandidates().find(function(x){ return keyOf(x)===key; });
+    if(c){ commitSwap(swapIndex, c); }
+    view = null; render();
+  },
+  "open-reselect": function(){
+    view = "reselect"; reselectStep = "choose"; moodOpen = false; pending = []; render();
+  },
+  "reselect-self": function(){
+    const remaining = state.todayPicks.filter(function(p){ return !p.done; }).length;
+    candCtx = { mode:"reselect", max:remaining, exclude:pickedKeys() };
+    pending = []; reselectStep = "self"; render();
+  },
+  "open-addone": function(){
+    candCtx = { mode:"addone", max:1, exclude:pickedKeys() };
+    pending = []; view = "pickList"; render();
+  },
+  "cancel": function(){ view = null; reselectStep = "choose"; moodOpen = false; pending = []; render(); }
+};
+
+document.getElementById("app").addEventListener("click", function(e){
+  const el = e.target.closest("[data-action]");
+  if(!el) return;
+  const fn = handlers[el.dataset.action];
+  if(fn) fn(el);
+});
+
+/* ---------- boot ---------- */
+rolloverIfNeeded();
+render(); // first paint from cache (or notice)
+loadData().then(function(data){
+  if(data){ render(); }       // refresh with latest CSV
+  else { render(); }          // notice screen if nothing cached
+});
+
+/* re-check day boundary when tab regains focus */
+document.addEventListener("visibilitychange", function(){
+  if(!document.hidden){ const before = state.dayKey; rolloverIfNeeded(); if(before!==state.dayKey){ view=null; render(); } }
+});
+
+})();
+</script>
+</body>
+</html>
