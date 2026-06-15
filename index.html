@@ -753,7 +753,8 @@ const handlers = {
   },
   "reselect-self": function(){
     const remaining = state.todayPicks.filter(function(p){ return !p.done; }).length;
-    candCtx = { mode:"reselect", max:remaining, exclude:pickedKeys() };
+    const completedKeys = new Set(state.todayPicks.filter(function(p){ return p.done; }).map(keyOf));
+    candCtx = { mode:"reselect", max:remaining, exclude:completedKeys };
     pending = []; reselectStep = "self"; render();
   },
   "open-addone": function(){
