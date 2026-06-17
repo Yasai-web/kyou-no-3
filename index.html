@@ -227,6 +227,8 @@ let moodOpen = false;      // ① mood expander
 let pending = [];          // manual selection (candidate objects)
 let candCtx = null;        // {mode, max, exclude:Set, count}
 let swapIndex = -1;        // ④ slot being swapped
+let swapStep = "choose";   // ④ "choose" | "self"
+let swapNotice = "";       // ④ inline message when no mood candidate
 let reselectStep = "choose"; // ⑤ "choose" | "self"
 
 /* ---------- day key (4:00 boundary) ---------- */
@@ -585,13 +587,30 @@ function screenToday(){
 
 function screenSwap(){
   const target = state.todayPicks[swapIndex];
-  return header("入れかえる")
+  let h = header("入れかえる")
     + '<div class="section-h">いま入っているもの</div>'
     + '<div class="framed"><div class="pick-body"><div class="pick-main">'+esc(pickMain(target))+'</div>'
       + '<div class="pick-sub">'+esc(pickSub(target))+'</div></div></div>'
-    + '<div class="section-h">かわりに入れる</div>'
-    + candidateListSwap()
-    + '<button class="link center" data-action="cancel">やめておく</button>';
+    + '<div class="section-h">かわりに入れる</div>';
+  if(swapStep==="self"){
+    h += candidateListSwap()
+      + '<button class="link center" data-action="swap-choose">もどる</button>';
+    return h;
+  }
+  h += '<div class="mode-card" data-action="swap-self">'
+    + '<div class="mode-ico blue"><i class="ti ti-hand-finger"></i></div>'
+    + '<div><div class="mode-ttl">じぶんで選ぶ</div><div class="mode-sub">リストから選んで入れかえます。</div></div></div>'
+    + '<div class="mode-card" data-action="mood-expand">'
+    + '<div class="mode-ico amber"><i class="ti ti-cloud"></i></div>'
+    + '<div><div class="mode-ttl">気分に合わせる</div><div class="mode-sub">気分に合う1つを自動で選びます。</div></div></div>'
+    + '<div class="mood-options'+(moodOpen?" open":"")+'">'
+    + moodBtn("light","軽めの日","ti-feather","swap")
+    + moodBtn("normal","ふつう","ti-walk","swap")
+    + moodBtn("hard","しっかり","ti-flame","swap")
+    + '</div>';
+  if(swapNotice) h += '<div class="locked-note">'+esc(swapNotice)+'</div>';
+  h += '<button class="link center" data-action="cancel">やめておく</button>';
+  return h;
 }
 function candidateListSwap(){
   const cands = allCandidates();
@@ -700,6 +719,14 @@ const handlers = {
       const items = autoPick(mood, 3, new Set());
       commitPicks(items, false);
       moodOpen = false; view = null;
+    } else if(ctx==="swap"){
+      const items = autoPick(mood, 1, pickedKeys()); // 現在の3つを除外 → 必ず別物
+      if(!items.length){
+        swapNotice = "この気分に合う候補がありません。別の気分か「じぶんで選ぶ」をお試しください。";
+        moodOpen = false; render(); return;
+      }
+      commitSwap(swapIndex, items[0]);
+      moodOpen = false; swapNotice = ""; view = null;
     } else { // reselect
       const exclude = pickedKeys();
       const remaining = state.todayPicks.filter(function(p){ return !p.done; }).length;
@@ -740,8 +767,11 @@ const handlers = {
   },
   "open-swap": function(el){
     swapIndex = Number(el.dataset.index);
+    swapStep = "choose"; moodOpen = false; swapNotice = "";
     view = "swap"; render();
   },
+  "swap-self": function(){ swapStep = "self"; moodOpen = false; swapNotice = ""; render(); },
+  "swap-choose": function(){ swapStep = "choose"; moodOpen = false; swapNotice = ""; render(); },
   "swap-pick": function(el){
     const key = el.dataset.key;
     const c = allCandidates().find(function(x){ return keyOf(x)===key; });
@@ -761,7 +791,7 @@ const handlers = {
     candCtx = { mode:"addone", max:1, exclude:pickedKeys() };
     pending = []; view = "pickList"; render();
   },
-  "cancel": function(){ view = null; reselectStep = "choose"; moodOpen = false; pending = []; render(); }
+  "cancel": function(){ view = null; reselectStep = "choose"; swapStep = "choose"; swapNotice = ""; moodOpen = false; pending = []; render(); }
 };
 
 document.getElementById("app").addEventListener("click", function(e){
