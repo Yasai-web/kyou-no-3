@@ -206,14 +206,21 @@ const WD = ["日","月","火","水","木","金","土"];
 
 /* ---------- state ---------- */
 function freshState(){
-  return { dayKey:getDayKey(), todayPicks:[], dailyDone:{}, lastPicked:{}, csvCache:null };
+  return { dayKey:getDayKey(), todayPicks:[], everydayDone:{}, lastPicked:{}, csvCache:null };
 }
 function loadState(){
   try{
     const raw = localStorage.getItem(STORE_KEY);
     if(!raw) return freshState();
     const s = JSON.parse(raw);
-    return Object.assign(freshState(), s);
+    const merged = Object.assign(freshState(), s);
+    if(s.dailyDone && !s.everydayDone) merged.everydayDone = s.dailyDone;
+    if(merged.csvCache && !merged.csvCache.everyday && merged.csvCache.daily){
+      merged.csvCache.everyday = merged.csvCache.daily;
+      merged.csvCache.daily = [];
+    }
+    delete merged.dailyDone;
+    return merged;
   }catch(e){ return freshState(); }
 }
 function saveState(){
@@ -248,7 +255,7 @@ function rolloverIfNeeded(){
   if(state.dayKey !== cur){
     state.dayKey = cur;
     state.todayPicks = [];
-    state.dailyDone = {};
+    state.everydayDone = {};
     // lastPicked & csvCache are kept
     saveState();
   }
@@ -265,7 +272,11 @@ function norm(e){
   e=(e||"").trim();
   return (e==="軽い"||e==="ふつう"||e==="重い") ? e : "ふつう";
 }
-function keyOf(x){ return x.source==="routine" ? x.name : (x.name+"::"+(x.next||"")); }
+function keyOf(x){
+  if(x.source==="daily") return "daily::"+x.name;
+  if(x.source==="routine") return x.name;
+  return x.name+"::"+(x.next||"");
+}
 function dayKeyNum(k){ return Number(String(k).replace(/-/g,"")); }
 
 function todayWeekdayChar(){
@@ -296,7 +307,7 @@ function parseCSV(text){
   });
 }
 async function loadData(){
-  const files = ["routines","projects","events","fun","daily"];
+  const files = ["routines","projects","events","fun","daily","everyday"];
   const t = Date.now();
   try{
     const texts = await Promise.all(files.map(function(f){
@@ -321,11 +332,15 @@ function projects(){ return (state.csvCache && state.csvCache.projects) || []; }
 function events(){ return (state.csvCache && state.csvCache.events) || []; }
 function funList(){ return (state.csvCache && state.csvCache.fun) || []; }
 function dailyList(){ return (state.csvCache && state.csvCache.daily) || []; }
+function everydayList(){ return (state.csvCache && state.csvCache.everyday) || []; }
 
 function allCandidates(){
   const list = [];
+  dailyList().forEach(function(d){
+    list.push({ source:"daily", name:d.name, min:(d.min||"").trim(), energy:norm(d.energy) });
+  });
   routines().forEach(function(r){
-    list.push({ source:"routine", name:r.name, min:(r.min||"").trim(), energy:norm(r.energy) });
+    list.push({ source:"routine", name:r.name, min:(r.min||"").trim(), days:(r.days||"").trim(), energy:norm(r.energy) });
   });
   projects().forEach(function(p){
     list.push({ source:"project", name:p.name, next:p.next, energy:norm(p.energy) });
@@ -339,40 +354,52 @@ function pickedKeys(){
 }
 
 /* ---------- selection logic ---------- */
-function autoPick(mood, count, exclude){
+const CATEGORY_ORDER = ["daily","routine","project"];
+
+function sourceLabel(source){
+  if(source==="daily") return "デイリー";
+  if(source==="routine") return "ルーティン";
+  return "プロジェクト";
+}
+
+function defaultTargets(count){
+  return count>=3 ? CATEGORY_ORDER.slice() : [];
+}
+
+function missingTargetsFromPicked(picks, count){
+  const used = new Set(picks.map(function(p){ return p.source; }));
+  const targets = CATEGORY_ORDER.filter(function(source){ return !used.has(source); });
+  return targets.slice(0, count);
+}
+
+function scoreCandidates(pool, mood){
+  return pool.map(function(x){
+    const lp = state.lastPicked[keyOf(x)];
+    return {
+      x:x,
+      weekdayBonus:(x.source==="routine" && routineToday(x)) ? 0 : 1, // 0 = priority
+      energyBonus:(mood==="hard" && x.energy==="重い") ? 0 : 1,
+      rota: lp ? dayKeyNum(lp) : -1                                    // smaller = older / never
+    };
+  }).sort(function(a,b){
+    return a.weekdayBonus-b.weekdayBonus || a.energyBonus-b.energyBonus || a.rota-b.rota || Math.random()-0.5;
+  });
+}
+
+function autoPick(mood, count, exclude, targets){
   let pool = allCandidates().filter(function(x){ return !exclude.has(keyOf(x)); });
   if(mood==="light") pool = pool.filter(function(x){ return x.energy==="軽い"; });
   else if(mood==="normal") pool = pool.filter(function(x){ return x.energy==="軽い"||x.energy==="ふつう"; });
   // hard: all
 
-  const scored = pool.map(function(x){
-    const lp = state.lastPicked[keyOf(x)];
-    return {
-      x:x,
-      weekdayBonus:(x.source==="routine" && routineToday(x)) ? 0 : 1, // 0 = priority
-      rota: lp ? dayKeyNum(lp) : -1                                    // smaller = older / never
-    };
-  });
-  scored.sort(function(a,b){
-    return a.weekdayBonus-b.weekdayBonus || a.rota-b.rota || Math.random()-0.5;
-  });
-
+  const scored = scoreCandidates(pool, mood);
   const result = [];
-  const routineCap = count>=3 ? 2 : count;
-  if(mood==="hard"){
-    const h = scored.find(function(s){ return s.x.energy==="重い"; });
-    if(h) result.push(h.x);
-  }
-  let rc = result.filter(function(x){ return x.source==="routine"; }).length;
-  function projectLeft(){ return scored.some(function(s){ return s.x.source==="project" && result.indexOf(s.x)===-1; }); }
-  for(let i=0;i<scored.length && result.length<count;i++){
-    const x = scored[i].x;
-    if(result.indexOf(x)!==-1) continue;
-    if(x.source==="routine" && rc>=routineCap && projectLeft()) continue; // keep balance
-    result.push(x);
-    if(x.source==="routine") rc++;
-  }
-  // fill any remainder (balance constraint may have skipped slots)
+  (targets || defaultTargets(count)).forEach(function(source){
+    if(result.length>=count) return;
+    const hit = scored.find(function(s){ return s.x.source===source && result.indexOf(s.x)===-1; });
+    if(hit) result.push(hit.x);
+  });
+  // Fill missing categories or empty categories from the remaining candidate pool.
   for(let i=0;i<scored.length && result.length<count;i++){
     if(result.indexOf(scored[i].x)===-1) result.push(scored[i].x);
   }
@@ -441,21 +468,22 @@ function nearestEvent(){
 }
 
 /* ---------- display helpers ---------- */
-function pickMain(p){ return p.source==="routine" ? p.name : p.next; }
+function pickMain(p){ return p.source==="project" ? p.next : p.name; }
 function pickSub(p){
   if(p.done) return "完了!";
-  if(p.source==="routine"){
-    const parts = ["ルーティン"];
+  if(p.source==="daily" || p.source==="routine"){
+    const parts = [sourceLabel(p.source)];
     if((p.min||"")!=="") parts.push(p.min+"分");
     parts.push(p.energy);
     return parts.join(" · ");
   }
-  return p.name + " · " + p.energy;
+  return sourceLabel(p.source) + " · " + p.name + " · " + p.energy;
 }
-function candMain(c){ return c.source==="routine" ? c.name : c.next; }
+function candMain(c){ return c.source==="project" ? c.next : c.name; }
 function candSub(c){
-  if(c.source==="routine"){
+  if(c.source==="daily" || c.source==="routine"){
     const parts = [];
+    if(c.source==="routine" && (c.days||"")!=="" && c.days!=="毎日") parts.push(c.days);
     if((c.min||"")!=="") parts.push(c.min+"分");
     parts.push(c.energy);
     return parts.join(" · ");
@@ -474,12 +502,12 @@ function funBlock(){
   return h + "</div>";
 }
 function dailyBlock(){
-  const items = dailyList();
+  const items = everydayList();
   if(!items.length) return "";
   let h = '<div class="section-h">まいにち</div><div class="daily-grid">';
   items.forEach(function(d){
-    const done = !!state.dailyDone[d.name];
-    h += '<div class="daily-card'+(done?" done":"")+'" data-action="daily-toggle" data-name="'+esc(d.name)+'">'
+    const done = !!state.everydayDone[d.name];
+    h += '<div class="daily-card'+(done?" done":"")+'" data-action="everyday-toggle" data-name="'+esc(d.name)+'">'
       + '<span class="check"><i class="ti ti-check"></i></span>'
       + '<span class="daily-name">'+esc(d.name)+'</span></div>';
   });
@@ -500,8 +528,6 @@ function header(title){
 /* ---------- candidate list (②④⑤self⑥addOne) ---------- */
 function candidateListHTML(){
   const cands = allCandidates();
-  const rs = cands.filter(function(c){ return c.source==="routine"; });
-  const ps = cands.filter(function(c){ return c.source==="project"; });
   const selKeys = new Set(pending.map(keyOf));
 
   function row(c){
@@ -516,15 +542,18 @@ function candidateListHTML(){
       + '<div class="cand-sub">'+esc(candSub(c))+'</div></div></div>';
   }
 
+  function group(source, title){
+    const items = cands.filter(function(c){ return c.source===source; });
+    if(!items.length) return "";
+    let html = '<div class="cand-group-h">'+title+'</div>';
+    items.forEach(function(c){ html += row(c); });
+    return html;
+  }
+
   let h = "";
-  if(rs.length){
-    h += '<div class="cand-group-h">ルーティン</div>';
-    rs.forEach(function(c){ h += row(c); });
-  }
-  if(ps.length){
-    h += '<div class="cand-group-h">プロジェクトの次の一手</div>';
-    ps.forEach(function(c){ h += row(c); });
-  }
+  h += group("daily", "デイリー");
+  h += group("routine", "ルーティン");
+  h += group("project", "プロジェクトの次の一手");
   return h;
 }
 function confirmBar(){
@@ -541,7 +570,7 @@ function screenMorning(){
       + '<div><div class="mode-ttl">じぶんで選ぶ</div><div class="mode-sub">リストから気分でタップ。最大3つ。</div></div></div>'
     + '<div class="mode-card" data-action="mood-expand">'
       + '<div class="mode-ico amber"><i class="ti ti-cloud"></i></div>'
-      + '<div><div class="mode-ttl">気分に合わせる</div><div class="mode-sub">今日のエネルギーに合う3つを自動で。</div></div></div>'
+      + '<div><div class="mode-ttl">気分に合わせる</div><div class="mode-sub">デイリー・ルーティン・プロジェクトから自動で。</div></div></div>'
     + '<div class="mood-options'+(moodOpen?" open":"")+'">'
       + moodBtn("light","軽めの日","ti-feather","morning")
       + moodBtn("normal","ふつう","ti-walk","morning")
@@ -615,8 +644,7 @@ function screenSwap(){
 function candidateListSwap(){
   const cands = allCandidates();
   const exclude = pickedKeys();
-  const rs = cands.filter(function(c){ return c.source==="routine" && !exclude.has(keyOf(c)); });
-  const ps = cands.filter(function(c){ return c.source==="project" && !exclude.has(keyOf(c)); });
+  const available = cands.filter(function(c){ return !exclude.has(keyOf(c)); });
   function row(c){
     const badge = (c.source==="routine" && routineToday(c)) ? '<span class="badge">今日</span>' : "";
     return '<div class="cand" data-action="swap-pick" data-key="'+esc(keyOf(c))+'">'
@@ -624,10 +652,18 @@ function candidateListSwap(){
       + '<div class="cand-body"><div class="cand-main">'+esc(candMain(c))+badge+'</div>'
       + '<div class="cand-sub">'+esc(candSub(c))+'</div></div></div>';
   }
+  function group(source, title){
+    const items = available.filter(function(c){ return c.source===source; });
+    if(!items.length) return "";
+    let html = '<div class="cand-group-h">'+title+'</div>';
+    items.forEach(function(c){ html += row(c); });
+    return html;
+  }
   let h="";
-  if(!rs.length && !ps.length) return '<div class="locked-note">入れかえられる候補がありません。</div>';
-  if(rs.length){ h+='<div class="cand-group-h">ルーティン</div>'; rs.forEach(function(c){ h+=row(c); }); }
-  if(ps.length){ h+='<div class="cand-group-h">プロジェクトの次の一手</div>'; ps.forEach(function(c){ h+=row(c); }); }
+  if(!available.length) return '<div class="locked-note">入れかえられる候補がありません。</div>';
+  h += group("daily", "デイリー");
+  h += group("routine", "ルーティン");
+  h += group("project", "プロジェクトの次の一手");
   return h;
 }
 
@@ -716,11 +752,12 @@ const handlers = {
   "mood-pick": function(el){
     const mood = el.dataset.mood, ctx = el.dataset.ctx;
     if(ctx==="morning"){
-      const items = autoPick(mood, 3, new Set());
+      const items = autoPick(mood, 3, new Set(), CATEGORY_ORDER);
       commitPicks(items, false);
       moodOpen = false; view = null;
     } else if(ctx==="swap"){
-      const items = autoPick(mood, 1, pickedKeys()); // 現在の3つを除外 → 必ず別物
+      const target = state.todayPicks[swapIndex];
+      const items = autoPick(mood, 1, pickedKeys(), target ? [target.source] : []); // 現在の3つを除外 → 必ず別物
       if(!items.length){
         swapNotice = "この気分に合う候補がありません。別の気分か「じぶんで選ぶ」をお試しください。";
         moodOpen = false; render(); return;
@@ -730,7 +767,8 @@ const handlers = {
     } else { // reselect
       const exclude = pickedKeys();
       const remaining = state.todayPicks.filter(function(p){ return !p.done; }).length;
-      const items = autoPick(mood, remaining, exclude);
+      const completed = state.todayPicks.filter(function(p){ return p.done; });
+      const items = autoPick(mood, remaining, exclude, missingTargetsFromPicked(completed, remaining));
       commitReselect(items);
       moodOpen = false; view = null;
     }
@@ -760,9 +798,9 @@ const handlers = {
     state.todayPicks[i].done = !state.todayPicks[i].done;
     saveState(); view = null; render();
   },
-  "daily-toggle": function(el){
+  "everyday-toggle": function(el){
     const n = el.dataset.name;
-    state.dailyDone[n] = !state.dailyDone[n];
+    state.everydayDone[n] = !state.everydayDone[n];
     saveState(); render();
   },
   "open-swap": function(el){
